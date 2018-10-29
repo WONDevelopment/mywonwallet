@@ -1,0 +1,280 @@
+<template>
+  <div class="transactions-side-menu">
+    <div class="side-menu">
+      <!-- <ul>
+        <li>
+          <div
+            :class="[selectedTab === 'send' || selectedTab === 'offline' ? 'active' : '', 'menu-group-title']"
+            @click.prevent="toggle('openSend')">
+            <img :src="selectedTab === 'send' || selectedTab === 'offline'? require(`@/assets/images/sidemenu/send-active.svg`): require(`@/assets/images/sidemenu/send.svg`)">
+            <p>{{ $t("interface.txSideMenuTitle") }}</p>
+            <i
+              :class="['fa', showSend ? 'fa-angle-up':'fa-angle-down']"
+              aria-hidden="true"/>
+          </div>
+          <ul v-show="showSend">
+            <li
+              :class="selectedTab === 'send'? 'active': ''"
+              @click.prevent="switchTabs('send')">
+              {{ $t("common.sendTx") }}
+            </li>
+            <li
+              :class="selectedTab === 'offline'? 'active': ''"
+              @click.prevent="switchTabs('offline')">
+              {{ $t("common.offline") }}
+            </li>
+          </ul>
+        </li>
+        <li @click.prevent="switchTabs('swap')" >
+          <div :class="[selectedTab === 'swap'? 'active': '', 'menu-group-title']">
+            <img :src="selectedTab === 'swap'? require(`@/assets/images/sidemenu/swap-active.svg`): require(`@/assets/images/sidemenu/swap.svg`)">
+            <p>
+              {{ $t("common.swap") }}
+            </p>
+          </div>
+        </li>
+        <li @click.prevent="switchTabs('dapps')" >
+          <div :class="[selectedTab === 'dapps'? 'active': '', 'menu-group-title']">
+            <img :src="selectedTab === 'dapps'? require(`@/assets/images/sidemenu/dapps-active.svg`): require(`@/assets/images/sidemenu/dapps.svg`)">
+            <p>
+              {{ $t("common.dapps") }}
+            </p>
+          </div>
+        </li>
+        <li>
+          <div
+            :class="[selectedTab === 'interactC' || selectedTab === 'deployC' ? 'active' : '', 'menu-group-title']"
+            @click.prevent="toggle('openContract')">
+            <img :src="selectedTab === 'interactC' || selectedTab === 'deployC'? require(`@/assets/images/sidemenu/contract-active.svg`): require(`@/assets/images/sidemenu/contract.svg`)">
+            <p>{{ $t("interface.txSideMenuContract") }}</p>
+            <i
+              :class="['fa', showContract ? 'fa-angle-up':'fa-angle-down']"
+              aria-hidden="true"/>
+          </div>
+          <ul v-show="showContract">
+            <li
+              :class="selectedTab === 'interactC'? 'active': ''"
+              @click.prevent="switchTabs('interactC')">
+              {{ $t("common.interactWcontract") }}
+            </li>
+            <li
+              :class="selectedTab === 'deployC'? 'active': ''"
+              @click.prevent="switchTabs('deployC')">
+              {{ $t("common.depContract") }}
+            </li>
+          </ul>
+        </li>
+        <li>
+          <div
+            :class="[selectedTab === 'signMessage' || selectedTab === 'verifyMessage' ? 'active' : '', 'menu-group-title']"
+            @click.prevent="toggle('openMessage')">
+            <img :src="selectedTab === 'signMessage' || selectedTab === 'verifyMessage'? require(`@/assets/images/sidemenu/message-active.svg`): require(`@/assets/images/sidemenu/message.svg`)">
+            <p>{{ $t("interface.txSideMenuMessage") }}</p>
+            <i
+              :class="['fa', showMessage ? 'fa-angle-up':'fa-angle-down']"
+              aria-hidden="true"/>
+          </div>
+          <ul v-show="showMessage">
+            <li
+              :class="selectedTab === 'signMessage'? 'active': ''"
+              @click.prevent="switchTabs('signMessage')">
+              {{ $t("common.signMessage") }}
+            </li>
+            <li
+              :class="selectedTab === 'verifyMessage'? 'active': ''"
+              @click.prevent="switchTabs('verifyMessage')">
+              {{ $t("common.verifyMessage") }}
+            </li>
+          </ul>
+        </li>
+      </ul> -->
+      <ul>
+        <li
+          v-for="(tab, idx) in tabData"
+          :key="tab.title + idx + tab.caret"
+          @click.prevent="tab.click">
+          <div :class="[tab.isActive ? 'active' : '', 'menu-group-title']">
+            <img :src="tab.iconSrc">
+            <p>{{ tab.title }}</p>
+            <i
+              v-show="tab.hasOwnProperty('caret')"
+              :class="['fa', tab.caret ? 'fa-angle-up':'fa-angle-down']"
+              aria-hidden="true"/>
+          </div>
+          <ul
+            v-show="tab.caret"
+            v-if="tab.hasOwnProperty('caret')">
+            <li
+              v-for="(content, idx) in tab.contents"
+              :key="content.itemTitle + idx"
+              :class="content.itemActive? 'active': ''"
+              @click.prevent="content.itemClick">
+              {{ content.itemTitle }}
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script>
+import store from 'store';
+export default {
+  props: {
+    currentTab: {
+      type: String,
+      default: ''
+    },
+    switchTabs: {
+      type: Function,
+      default: function() {}
+    }
+  },
+  data() {
+    const self = this;
+    return {
+      showSend: false,
+      showContract: false,
+      showMessage: false,
+      tabData: [
+        {
+          click: function() {
+            self.toggle('openSend');
+          },
+          isActive: self.currentTab === 'send' || self.currentTab === 'offline',
+          iconSrc:
+            self.currentTab === 'send' || self.currentTab === 'offline'
+              ? require(`@/assets/images/sidemenu/send-active.svg`)
+              : require(`@/assets/images/sidemenu/send.svg`),
+          title: self.$t('interface.txSideMenuTitle'),
+          caret: self.showSend,
+          contents: [
+            {
+              itemActive: self.currentTab === 'send',
+              itemTitle: self.$t('common.sendTx'),
+              itemClick: function() {
+                self.switchTabs('send');
+              }
+            },
+            {
+              itemActive: self.currentTab === 'offline',
+              itemTitle: self.$t('common.offline'),
+              itemClick: function(e) {
+                e.cancelBubble = true;
+                self.switchTabs('offline');
+              }
+            }
+          ]
+        }
+      ]
+    };
+  },
+  watch: {
+    currentTab(newVal) {
+      this.updateTabData();
+      switch (newVal) {
+        case 'send':
+          this.showSend = true;
+          this.showContract = false;
+          this.$store.dispatch('updatePageState', [
+            'interface',
+            'sideMenu',
+            newVal
+          ]);
+          store.set('sideMenu', newVal);
+          break;
+        case 'offline':
+          this.showSend = true;
+          this.showContract = false;
+          this.$store.dispatch('updatePageState', [
+            'interface',
+            'sideMenu',
+            newVal
+          ]);
+          store.set('sideMenu', newVal);
+          break;
+        default:
+          this.showSend = false;
+          this.showContract = false;
+      }
+    },
+    showSend() {
+      this.updateTabData();
+    },
+    showMessage() {
+      this.updateTabData();
+    },
+    showContract() {
+      this.updateTabData();
+    },
+    tabData: {
+      handler: function(newVal) {
+        this.tabData = newVal;
+      },
+      deep: true
+    }
+  },
+  methods: {
+    updateTabData() {
+      const self = this;
+      this.tabData = [
+        {
+          click: function() {
+            self.toggle('openSend');
+          },
+          isActive: self.currentTab === 'send' || self.currentTab === 'offline',
+          iconSrc:
+            self.currentTab === 'send' || self.currentTab === 'offline'
+              ? require(`@/assets/images/sidemenu/send-active.svg`)
+              : require(`@/assets/images/sidemenu/send.svg`),
+          title: self.$t('interface.txSideMenuTitle'),
+          caret: self.showSend,
+          contents: [
+            {
+              itemActive: self.currentTab === 'send',
+              itemTitle: self.$t('common.sendTx'),
+              itemClick: function(e) {
+                e.cancelBubble = true;
+                self.switchTabs('send');
+              }
+            },
+            {
+              itemActive: self.currentTab === 'offline',
+              itemTitle: self.$t('common.offline'),
+              itemClick: function(e) {
+                e.cancelBubble = true;
+                self.switchTabs('offline');
+              }
+            }
+          ]
+        }
+      ];
+    },
+    toggle(param) {
+      switch (param) {
+        case 'openSend':
+          this.showSend = !this.showSend;
+          this.showContract = false;
+          this.showMessage = false;
+          break;
+
+        default:
+          this.showSend = false;
+          this.showContract = false;
+          this.showMessage = false;
+          this.switchTabs(param);
+          this.storePage(param);
+      }
+    },
+    storePage(param) {
+      this.$store.dispatch('updatePageState', ['interface', 'sideMenu', param]);
+      store.set('sideMenu', param);
+    }
+  }
+};
+</script>
+
+<style lang="scss" scoped>
+@import 'InterfaceSideMenu.scss';
+</style>

@@ -1,0 +1,256 @@
+<template>
+  <div
+    v-if="$store.state.wallet !== null"
+    class="send-eth-and-tokens">
+    <div class="wrap">
+      <div class="side-nav">
+        <interface-side-menu
+          :current-tab="currentTab"
+          :switch-tabs="switchTabs"/>
+      </div>
+      <div class="contents">
+        <div class="tx-contents">
+          <div>
+            <interface-address :address="address" />
+          </div>
+          <div>
+            <interface-balance :balance="balance"/>
+          </div>
+          <div>
+            <interface-network :block-number="blockNumber" />
+          </div> 
+          <send-currency-container 
+            v-show="currentTab === 'send' || currentTab === ''"
+            :balance="balance"
+            :tokens-with-balance="tokensWithBalance"/>
+          <send-offline-container v-show="currentTab === 'offline'"/>
+          <swap-container v-show="currentTab === 'swap'"/>
+          <dapps-container v-show="currentTab === 'dapps'"/>
+          <interact-with-contract-container v-show="currentTab === 'interactC'"/>
+          <sign-message-container v-show="currentTab === 'signMessage'"/>
+          <verify-message-container v-show="currentTab === 'verifyMessage'"/>
+          <deploy-contract-container v-show="currentTab === 'deployC'"/>
+          <div
+            v-if="$store.state.online"
+            class="tokens">
+            <interface-tokens
+              :get-token-balance="getTokenBalance"
+              :tokens="tokens"
+              :received-tokens="receivedTokens"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div v-else>
+    <wallet-not-found-container/>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex';
+
+import DappsContainer from './containers/DappsContainer';
+import DeployContractContainer from './containers/DeployContractContainer';
+import InteractWithContractContainer from './containers/InteractWithContractContainer';
+import SendCurrencyContainer from './containers/SendCurrencyContainer';
+import SendOfflineContainer from './containers/SendOfflineContainer';
+import SwapContainer from './containers/SwapContainer';
+import SignMessageContainer from './containers/SignMessageContainer';
+import VerifyMessageContainer from './containers/VerifyMessageContainer';
+import WalletNotFoundContainer from './containers/WalletNotFoundContainer';
+
+import InterfaceAddress from './components/InterfaceAddress';
+import InterfaceBalance from './components/InterfaceBalance';
+import InterfaceNetwork from './components/InterfaceNetwork';
+import InterfaceSideMenu from './components/InterfaceSideMenu';
+import InterfaceTokens from './components/InterfaceTokens';
+
+import store from 'store';
+
+const BigNumber = require('bignumber.js');
+
+export default {
+  components: {
+    'send-currency-container': SendCurrencyContainer,
+    'send-offline-container': SendOfflineContainer,
+    'swap-container': SwapContainer,
+    'dapps-container': DappsContainer,
+    'interact-with-contract-container': InteractWithContractContainer,
+    'deploy-contract-container': DeployContractContainer,
+    'sign-message-container': SignMessageContainer,
+    'verify-message-container': VerifyMessageContainer,
+    'interface-side-menu': InterfaceSideMenu,
+    'interface-address': InterfaceAddress,
+    'interface-balance': InterfaceBalance,
+    'interface-network': InterfaceNetwork,
+    'interface-tokens': InterfaceTokens,
+    'wallet-not-found-container': WalletNotFoundContainer
+  },
+  data() {
+    return {
+      currentTab: this.$store.state.pageStates.interface.sideMenu,
+      balance: '0',
+      blockNumber: 0,
+      tokens: [],
+      receivedTokens: false,
+      tokensWithBalance: []
+    };
+  },
+  computed: {
+    address() {
+      if (this.$store.state.wallet !== null) {
+        return this.$store.state.wallet.getAddressString();
+      }
+    },
+    ...mapGetters({
+      network: 'network'
+    })
+  },
+  watch: {
+    network() {
+      if (this.$store.state.online === true) {
+        this.getBalance();
+        setInterval(this.getBalance, 14000);
+        this.getBlock();
+        setInterval(this.getBlock, 14000);
+        this.setTokens();
+        setInterval(this.setTokens, 14000);
+      }
+    }
+  },
+  mounted() {
+    if (store.get('sideMenu') !== undefined) {
+      this.currentTab = store.get('sideMenu');
+      this.$store.dispatch('updatePageState', [
+        'interface',
+        'sideMenu',
+        store.get('sideMenu')
+      ]);
+    }
+
+    if (this.$store.state.online === true) {
+      setInterval(this.getBalance, 14000);
+      this.getBalance();
+      setInterval(this.getBlock, 14000);
+      this.setTokens();
+      setInterval(this.setTokens, 14000);
+    }
+  },
+  methods: {
+    switchTabs(param) {
+      this.currentTab = param;
+      this.$store.dispatch('updatePageState', ['interface', 'sideMenu', param]);
+      store.set('sideMenu', param);
+    },
+    async getTokenBalance(token) {
+      if (!this.$store.state.wallet) return false;
+
+      const web3 = this.$store.state.web3;
+      const contractAbi = [
+        {
+          name: 'balanceOf',
+          type: 'function',
+          constant: true,
+          inputs: [{ name: 'address', type: 'address' }],
+          outputs: [{ name: 'out', type: 'uint256' }]
+        }
+      ];
+      const contract = new web3.won.Contract(contractAbi);
+      const data = contract.methods
+        .balanceOf(this.$store.state.wallet.getAddressString())
+        .encodeABI();
+      const balance = await web3.won
+        .call({
+          to: token.address
+            ? web3.utils.toChecksumAddress(token.address)
+            : web3.utils.toChecksumAddress(token.addr),
+          data: data
+        })
+        .then(res => {
+          let tokenBalance;
+          if (Number(res) === 0 || res === '0x') {
+            tokenBalance = 0;
+          } else {
+            // const denominator = web3.utils
+            //   .toBN(10)
+            //   .pow(web3.utils.toBN(token.decimals));
+            // tokenBalance = web3.utils
+            //   .toBN(res)
+            //   .div(denominator)
+            //   .toString(10);
+
+            const denominator = BigNumber(10).pow(token.decimals);
+            tokenBalance = BigNumber(res)
+              .div(denominator)
+              .toFixed(18);
+          }
+          return tokenBalance;
+        })
+        .catch(err => {
+          // eslint-disable-next-line no-console
+          console.error(err);
+        });
+      return balance;
+    },
+    async setTokens() {
+      const tokenWithBalance = [];
+      this.network.type.tokens.map(async token => {
+        token.balance = await this.getTokenBalance(token);
+        tokenWithBalance.push(token);
+      });
+      this.receivedTokens = false;
+      this.tokens = tokenWithBalance;
+
+      let customTokens = [];
+      if (
+        store.get('customTokens') !== undefined &&
+        store.get('customTokens')[this.network.type.name] !== undefined &&
+        store.get('customTokens')[this.network.type.name].length > 0
+      ) {
+        // eslint-disable-next-line
+        customTokens = store.get('customTokens')[this.network.type.name];
+        //.filter(token => token.balance > 0);
+      }
+
+      if (customTokens.length > 0) {
+        this.tokensWithBalance = this.tokens.concat(customTokens);
+      } else {
+        this.tokensWithBalance = this.tokens;
+      }
+    },
+    getBlock() {
+      this.$store.state.web3.won
+        .getBlockNumber()
+        .then(res => {
+          this.blockNumber = res;
+        })
+        .catch(err => {
+          // eslint-disable-next-line no-console
+          console.error(err);
+        });
+    },
+    getBalance() {
+      if (!this.address) return false;
+
+      const web3 = this.$store.state.web3;
+      web3.won
+        .getBalance(this.address)
+        .then(res => {
+          // const denominator = BigNumber(10).pow(18);
+          // this.balance = BigNumber(res).div(denominator).toFixed(18)
+          this.balance = web3.utils.fromWei(res, 'won');
+          this.$store.dispatch('setAccountBalance', this.balance);
+        })
+        .catch(err => {
+          // eslint-disable-next-line no-console
+          console.error(err);
+        });
+    }
+  }
+};
+</script>
+
+<style lang="scss" scoped>
+@import 'InterfaceLayout.scss';
+</style>

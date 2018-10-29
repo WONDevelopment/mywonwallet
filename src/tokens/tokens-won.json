@@ -1,0 +1,23 @@
+[
+  {
+    "symbol": "T",
+    "name": "TOP",
+    "type": "ERC20",
+    "address": "0x84c470a995b42d95df2091fac2bad1178bdb83bc",
+    "ens_address": "",
+    "decimals": 18,
+    "website": "http://topgamesinc.com",
+    "logo": {
+      "src": "http://topgamesinc.com/images/logo.png",
+      "width": "194",
+      "height": "77",
+      "ipfs_hash": ""
+    },
+    "support": {
+      "email": "support@topgamesinc.com",
+      "url": "http://topgamesinc.com"
+    },
+    "social": {
+    }
+  }
+]
